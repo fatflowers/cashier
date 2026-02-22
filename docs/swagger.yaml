@@ -1,0 +1,455 @@
+basePath: /
+definitions:
+  handlers.ListMembershipTransactionsResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handlers.TransactionItem'
+        type: array
+      total:
+        type: integer
+    type: object
+  handlers.ListTransactionRequest:
+    properties:
+      filters:
+        items:
+          $ref: '#/definitions/types.CommonFilter'
+        type: array
+      from:
+        type: integer
+      size:
+        type: integer
+      sort_by:
+        type: string
+      sort_order:
+        type: string
+    type: object
+  handlers.RespListMembershipTransactions:
+    properties:
+      code:
+        $ref: '#/definitions/response.APIResponseCode'
+      data:
+        $ref: '#/definitions/handlers.ListMembershipTransactionsResponse'
+      message:
+        type: string
+    type: object
+  handlers.RespMembershipStatistic:
+    properties:
+      code:
+        $ref: '#/definitions/response.APIResponseCode'
+      data:
+        $ref: '#/definitions/statistics.MembershipStatisticResponse'
+      message:
+        type: string
+    type: object
+  handlers.RespOK:
+    properties:
+      code:
+        $ref: '#/definitions/response.APIResponseCode'
+      data: {}
+      message:
+        type: string
+    type: object
+  handlers.RespUserListTransactions:
+    properties:
+      code:
+        $ref: '#/definitions/response.APIResponseCode'
+      data:
+        items:
+          $ref: '#/definitions/handlers.SwaggerTransaction'
+        type: array
+      message:
+        type: string
+    type: object
+  handlers.SwaggerTransaction:
+    properties:
+      auto_renew_expire_at:
+        type: string
+      created_at:
+        type: string
+      currency:
+        type: string
+      id:
+        type: string
+      next_auto_renew_at:
+        type: string
+      parent_transaction_id:
+        type: string
+      payment_item_id:
+        type: string
+      price:
+        type: integer
+      provider_id:
+        $ref: '#/definitions/types.PaymentProvider'
+      purchase_at:
+        type: string
+      refund_at:
+        type: string
+      transaction_id:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  handlers.TransactionItem:
+    properties:
+      auto_renew_expire_at:
+        type: string
+      created_at:
+        type: string
+      currency:
+        type: string
+      id:
+        type: string
+      is_first_purchase:
+        type: boolean
+      membership_duration_minutes:
+        type: integer
+      next_auto_renew_at:
+        type: string
+      parent_transaction_id:
+        type: string
+      payment_item_id:
+        type: string
+      payment_item_type:
+        $ref: '#/definitions/types.PaymentItemType'
+      price:
+        type: integer
+      provider_id:
+        $ref: '#/definitions/types.PaymentProvider'
+      provider_item_id:
+        type: string
+      purchase_at:
+        type: string
+      refund_at:
+        type: string
+      transaction_id:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  response.APIResponseCode:
+    enum:
+    - 0
+    - 40000
+    - 50000
+    type: integer
+    x-enum-varnames:
+    - APIResponseCodeOK
+    - APIResponseCodeBadRequest
+    - APIResponseCodeError
+  statistics.MembershipStatisticDataItem:
+    properties:
+      id:
+        $ref: '#/definitions/statistics.StatisticType'
+    type: object
+  statistics.MembershipStatisticRequest:
+    properties:
+      data_items:
+        items:
+          $ref: '#/definitions/statistics.MembershipStatisticDataItem'
+        type: array
+      filters:
+        items:
+          $ref: '#/definitions/types.CommonFilter'
+        type: array
+    type: object
+  statistics.MembershipStatisticResponse:
+    properties:
+      data_items:
+        additionalProperties:
+          items:
+            $ref: '#/definitions/statistics.MembershipStatisticResponseDataItem'
+          type: array
+        type: object
+    type: object
+  statistics.MembershipStatisticResponseDataItem:
+    properties:
+      date:
+        type: string
+      label:
+        type: string
+      value:
+        type: integer
+      value2:
+        type: integer
+      value3:
+        type: integer
+    type: object
+  statistics.StatisticType:
+    enum:
+    - daily_transaction_count
+    - daily_gmv
+    - total_gmv
+    - daily_membership_count
+    - daily_new_membership_count
+    - total_membership_count
+    - daily_accumulated_membership_count
+    - renewal_success_rate
+    type: string
+    x-enum-varnames:
+    - StatisticTypeDailyTransactionCount
+    - StatisticTypeDailyGmv
+    - StatisticTypeTotalGmv
+    - StatisticTypeDailyMembershipCount
+    - StatisticTypeDailyNewMembershipCount
+    - StatisticTypeTotalMembershipCount
+    - StatisticTypeDailyAccumulatedMembershipCount
+    - StatisticTypeRenewalSuccessRate
+  transaction.SendFreeGiftRequest:
+    properties:
+      operator_id:
+        description: 操作员ID
+        type: string
+      payment_item_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  transaction.TransactionVerifyRequest:
+    properties:
+      provider_id:
+        type: string
+      transaction_id:
+        type: string
+    type: object
+  types.CommonFilter:
+    properties:
+      field:
+        type: string
+      filters:
+        items:
+          $ref: '#/definitions/types.CommonFilter'
+        type: array
+      operator:
+        $ref: '#/definitions/types.CommonFilterOperator'
+      values:
+        items: {}
+        type: array
+    type: object
+  types.CommonFilterOperator:
+    enum:
+    - eq
+    - not_eq
+    - lt
+    - lte
+    - gt
+    - gte
+    - date_range
+    - range
+    - in
+    type: string
+    x-enum-varnames:
+    - CommonFilterOperatorEq
+    - CommonFilterOperatorNotEq
+    - CommonFilterOperatorLt
+    - CommonFilterOperatorLte
+    - CommonFilterOperatorGt
+    - CommonFilterOperatorGte
+    - CommonFilterOperatorDateRange
+    - CommonFilterOperatorRange
+    - CommonFilterOperatorIn
+  types.PaymentItemType:
+    enum:
+    - auto_renewable_subscription
+    - non_renewable_subscription
+    type: string
+    x-enum-varnames:
+    - PaymentItemTypeAutoRenewableSubscription
+    - PaymentItemTypeNonRenewableSubscription
+  types.PaymentProvider:
+    enum:
+    - apple
+    - google
+    - inner
+    type: string
+    x-enum-varnames:
+    - PaymentProviderApple
+    - PaymentProviderGoogle
+    - PaymentProviderInner
+host: localhost:8888
+info:
+  contact:
+    email: support@example.com
+    name: API Support
+    url: http://www.example.com/support
+  description: Payment processing backend API with health monitoring.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://example.com/terms/
+  title: Cashier Backend API
+  version: "1.0"
+paths:
+  /api/v1/admin/get_membership_statistic:
+    post:
+      consumes:
+      - application/json
+      description: Retrieves daily membership statistics.
+      parameters:
+      - description: Statistic request parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/statistics.MembershipStatisticRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RespMembershipStatistic'
+      summary: Get Membership Statistics (Admin)
+      tags:
+      - Admin
+  /api/v1/admin/list_user_membership_item:
+    post:
+      consumes:
+      - application/json
+      description: Retrieves a paginated and filterable list of all membership transactions.
+      parameters:
+      - description: List transaction request with filters, pagination, and sorting
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ListTransactionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RespListMembershipTransactions'
+      summary: List Membership Transactions (Admin)
+      tags:
+      - Admin
+  /api/v1/admin/send_free_gift:
+    post:
+      consumes:
+      - application/json
+      description: Grants a free membership item to a user.
+      parameters:
+      - description: Send free gift request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/transaction.SendFreeGiftRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RespOK'
+      summary: Send Free Gift (Admin)
+      tags:
+      - Admin
+  /api/v1/user/transaction/list:
+    get:
+      description: Retrieves a paginated list of transactions for a specific user.
+      parameters:
+      - description: User ID
+        in: query
+        name: user_id
+        required: true
+        type: string
+      - default: 0
+        description: Pagination offset
+        in: query
+        name: from
+        type: integer
+      - default: 100
+        description: Pagination limit
+        in: query
+        name: size
+        type: integer
+      - default: purchase_at
+        description: Sort by field
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order (asc/desc)
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RespUserListTransactions'
+      summary: List User Transactions
+      tags:
+      - User
+  /api/v1/user/transaction/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verifies a payment transaction with the provider and grants entitlement.
+      parameters:
+      - description: Transaction verification request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/transaction.TransactionVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful verification
+          schema:
+            $ref: '#/definitions/handlers.RespOK'
+      summary: Verify Transaction
+      tags:
+      - User
+  /api/v1/webhook/apple:
+    post:
+      consumes:
+      - application/json
+      description: Handles App Store Server Notifications V2. The request body should
+        be a Signed JWS payload.
+      parameters:
+      - description: App Store Server Notification V2 JWS payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RespOK'
+      summary: Apple Webhook
+      tags:
+      - Webhook
+  /healthz:
+    get:
+      description: Returns service status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - System
+swagger: "2.0"

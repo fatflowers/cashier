@@ -1,0 +1,7 @@
+env: dev
+server:
+  host: 0.0.0.0
+  port: 8888
+
+database:
+  dsn: postgresql://root:ns2024Xqrif848@postgres-b42b7e4d4817-public.rds-pg.volces.com:5432/defomo-payment

@@ -1,0 +1,28 @@
+# VCS
+.git
+.gitignore
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# Binaries and build output
+bin/
+dist/
+build/
+coverage/
+
+# Go test binaries
+**/*.test
+
+# OS junk
+.DS_Store
+
+# Do not bake local configs or secrets into images
+config/local_*.yaml
+.env
+.env.*
+
+# Swagger artifacts are fine to include, but can be excluded if large
+# docs/
+
