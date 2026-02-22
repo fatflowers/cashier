@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"net/http"
 	"github.com/fatflowers/cashier/internal/app/service/statistics"
 	subsvc "github.com/fatflowers/cashier/internal/app/service/subscription"
 	"github.com/fatflowers/cashier/internal/app/service/transaction"
@@ -9,6 +8,7 @@ import (
 	"github.com/fatflowers/cashier/pkg/config"
 	"github.com/fatflowers/cashier/pkg/response"
 	"github.com/fatflowers/cashier/pkg/types"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"

@@ -1,16 +1,16 @@
 package gormlog
 
 import (
-    "context"
-    "path/filepath"
-    "strings"
-    "time"
+	"context"
+	"path/filepath"
+	"strings"
+	"time"
 
-    "go.uber.org/zap"
-    gormlogger "gorm.io/gorm/logger"
-    "gorm.io/gorm/utils"
+	"go.uber.org/zap"
+	gormlogger "gorm.io/gorm/logger"
+	"gorm.io/gorm/utils"
 
-    "github.com/fatflowers/cashier/pkg/logctx"
+	"github.com/fatflowers/cashier/pkg/logctx"
 )
 
 // ZapLogger implements gorm.io/gorm/logger.Interface and enriches logs with
@@ -61,11 +61,11 @@ func (z *ZapLogger) Trace(ctx context.Context, begin time.Time, fc func() (strin
 	elapsed := time.Since(begin)
 	sql, rows := fc()
 	lg := logctx.FromCtx(ctx, z.base)
-    fields := []interface{}{
-        "rows", rows,
-        "elapsed_ms", elapsed.Milliseconds(),
-        "caller", shortCaller(utils.FileWithLineNum()),
-    }
+	fields := []interface{}{
+		"rows", rows,
+		"elapsed_ms", elapsed.Milliseconds(),
+		"caller", shortCaller(utils.FileWithLineNum()),
+	}
 	if err != nil {
 		lg.Errorw("gorm_trace", append(fields, "err", err, "sql", sql)...)
 		return
@@ -81,36 +81,37 @@ func (z *ZapLogger) Trace(ctx context.Context, begin time.Time, fc func() (strin
 
 // shortCaller trims absolute build paths to repo-relative where possible.
 // Examples:
-//   /Users/alex/repo/internal/platform/db/postgres.go:38 -> internal/platform/db/postgres.go:38
-//   C:\repo\project\pkg\x\y.go:12 -> pkg/x/y.go:12
+//
+//	/Users/alex/repo/internal/platform/db/postgres.go:38 -> internal/platform/db/postgres.go:38
+//	C:\repo\project\pkg\x\y.go:12 -> pkg/x/y.go:12
 func shortCaller(s string) string {
-    if s == "" {
-        return s
-    }
-    // split into path and :line suffix
-    pathPart := s
-    linePart := ""
-    if idx := strings.LastIndex(s, ":"); idx >= 0 {
-        pathPart = s[:idx]
-        linePart = s[idx:]
-    }
-    p := filepath.ToSlash(pathPart)
-    // prefer well-known repo roots
-    for _, marker := range []string{"/internal/", "/pkg/", "/cmd/"} {
-        if i := strings.Index(p, marker); i >= 0 {
-            // remove leading slash
-            rel := p[i+1:]
-            return rel + linePart
-        }
-    }
-    // fallback: last 3 segments
-    parts := strings.Split(p, "/")
-    n := len(parts)
-    if n >= 3 {
-        return strings.Join(parts[n-3:], "/") + linePart
-    }
-    if strings.HasPrefix(p, "/") {
-        p = p[1:]
-    }
-    return p + linePart
+	if s == "" {
+		return s
+	}
+	// split into path and :line suffix
+	pathPart := s
+	linePart := ""
+	if idx := strings.LastIndex(s, ":"); idx >= 0 {
+		pathPart = s[:idx]
+		linePart = s[idx:]
+	}
+	p := filepath.ToSlash(pathPart)
+	// prefer well-known repo roots
+	for _, marker := range []string{"/internal/", "/pkg/", "/cmd/"} {
+		if i := strings.Index(p, marker); i >= 0 {
+			// remove leading slash
+			rel := p[i+1:]
+			return rel + linePart
+		}
+	}
+	// fallback: last 3 segments
+	parts := strings.Split(p, "/")
+	n := len(parts)
+	if n >= 3 {
+		return strings.Join(parts[n-3:], "/") + linePart
+	}
+	if strings.HasPrefix(p, "/") {
+		p = p[1:]
+	}
+	return p + linePart
 }

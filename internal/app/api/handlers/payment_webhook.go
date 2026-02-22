@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"net/http"
 	nh "github.com/fatflowers/cashier/internal/app/service/notification_handler"
 	"github.com/fatflowers/cashier/pkg/logctx"
 	"github.com/fatflowers/cashier/pkg/response"
 	"github.com/fatflowers/cashier/pkg/types"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )

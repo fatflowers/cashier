@@ -30,22 +30,22 @@ type RefundRequest struct {
 type SendFreeGiftRequest struct {
 	UserID        string `json:"user_id"`
 	PaymentItemID string `json:"payment_item_id"`
-	OperatorId    string `json:"operator_id"` // 操作员ID
+	OperatorId    string `json:"operator_id"` // operator ID
 }
 
-// 校验解析交易信息，并发放权益
+// TransactionManager verifies/parses transaction data and grants entitlements.
 type TransactionManager interface {
-	// 校验交易信息
+	// Verify transaction info.
 	VerifyTransaction(ctx context.Context, req *TransactionVerifyRequest) error
-	// 解析交易信息
+	// Parse verification data.
 	ParseVerificationData(ctx context.Context, req *VerificationDataRequest) (*VerifiedData, error)
-	// 退款
+	// Process refund.
 	RefundTransaction(ctx context.Context, transactionId string, outRefundId string) error
-	// 扫描交易（用于后台管理列表）
+	// Scan transactions (used by admin list pages).
 	ScanTransactions(ctx context.Context, req *ScanTransactionsRequest) (*ScanTransactionsResponse, error)
 }
 
-// 扫描交易请求/响应
+// Scan transaction request/response.
 type ScanTransactionsRequest struct {
 	Filters   []*types.CommonFilter `json:"filters"`
 	From      int                   `json:"from"`

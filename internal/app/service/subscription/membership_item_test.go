@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// mockPaymentItem 用于测试的支付项
+// mockPaymentItem is a payment item test fixture.
 type mockPaymentItem struct {
 	id           string
 	itemType     types.PaymentItemType
@@ -25,13 +25,13 @@ func (m *mockPaymentItem) toType() *types.PaymentItem {
 }
 
 func TestGetAllActiveUserMembershipItems_AllCases(t *testing.T) {
-    now := time.Now()
-    oneMonth := 30 * 24 * time.Hour
-    twoMonths := 60 * 24 * time.Hour
-    threeMonths := 90 * 24 * time.Hour
-    oneHundredDays := 100 * 24 * time.Hour
-    // hours payloads for PaymentItem.DurationHour
-    oneMonthHours := int64(30 * 24)
+	now := time.Now()
+	oneMonth := 30 * 24 * time.Hour
+	twoMonths := 60 * 24 * time.Hour
+	threeMonths := 90 * 24 * time.Hour
+	oneHundredDays := 100 * 24 * time.Hour
+	// hours payloads for PaymentItem.DurationHour
+	oneMonthHours := int64(30 * 24)
 
 	type wantItem struct {
 		id   string
@@ -55,7 +55,7 @@ func TestGetAllActiveUserMembershipItems_AllCases(t *testing.T) {
 			name:        "single non-renewable subscription",
 			txs:         []*models.Transaction{{ID: "1", PaymentItemID: "payment1", PurchaseAt: now}},
 			queryAt:     now.Add(15 * 24 * time.Hour),
-            paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}},
+			paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}},
 			wantLen:     1,
 			want:        []wantItem{{id: "1", act: now, exp: now.Add(oneMonth), remS: int64(oneMonth.Seconds())}},
 		},
@@ -63,7 +63,7 @@ func TestGetAllActiveUserMembershipItems_AllCases(t *testing.T) {
 			name:        "single auto-renewable subscription",
 			txs:         []*models.Transaction{{ID: "1", PaymentItemID: "payment1", PurchaseAt: now, AutoRenewExpireAt: &[]time.Time{now.Add(oneMonth)}[0]}},
 			queryAt:     now.Add(15 * 24 * time.Hour),
-            paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeAutoRenewableSubscription}},
+			paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeAutoRenewableSubscription}},
 			wantLen:     1,
 			want:        []wantItem{{id: "1", act: now, exp: now.Add(oneMonth), remS: int64(oneMonth.Seconds())}},
 		},
@@ -74,7 +74,7 @@ func TestGetAllActiveUserMembershipItems_AllCases(t *testing.T) {
 				{ID: "2", PaymentItemID: "payment2", PurchaseAt: now.Add(15 * 24 * time.Hour), AutoRenewExpireAt: &[]time.Time{now.Add(45 * 24 * time.Hour)}[0]},
 			},
 			queryAt:     now.Add(20 * 24 * time.Hour),
-            paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}, {id: "payment2", itemType: types.PaymentItemTypeAutoRenewableSubscription}},
+			paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}, {id: "payment2", itemType: types.PaymentItemTypeAutoRenewableSubscription}},
 			wantLen:     2,
 			want: []wantItem{
 				{id: "2", act: now.Add(15 * 24 * time.Hour), exp: now.Add(45 * 24 * time.Hour), remS: int64((30 * 24 * time.Hour).Seconds())},
@@ -85,7 +85,7 @@ func TestGetAllActiveUserMembershipItems_AllCases(t *testing.T) {
 			name:        "refunded subscription",
 			txs:         []*models.Transaction{{ID: "1", PaymentItemID: "payment1", PurchaseAt: now, RefundAt: &[]time.Time{now.Add(5 * 24 * time.Hour)}[0]}},
 			queryAt:     now.Add(15 * 24 * time.Hour),
-            paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}},
+			paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}},
 			wantLen:     0,
 		},
 		{
@@ -95,7 +95,7 @@ func TestGetAllActiveUserMembershipItems_AllCases(t *testing.T) {
 				{ID: "2", PaymentItemID: "payment1", PurchaseAt: now.Add(4 * time.Hour)},
 			},
 			queryAt:     now.Add(35 * 24 * time.Hour),
-            paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}},
+			paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}},
 			wantLen:     2,
 			want: []wantItem{
 				{id: "1", act: now, exp: now.Add(oneMonth), remS: int64(oneMonth.Seconds())},
@@ -109,7 +109,7 @@ func TestGetAllActiveUserMembershipItems_AllCases(t *testing.T) {
 				{ID: "2", PaymentItemID: "payment1", PurchaseAt: now.Add(4 * time.Hour), RefundAt: &[]time.Time{now.Add(5 * time.Hour)}[0]},
 			},
 			queryAt:     now.Add(35 * 24 * time.Hour),
-            paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}},
+			paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}},
 			wantLen:     1,
 			want:        []wantItem{{id: "1", act: now, exp: now.Add(oneMonth), remS: int64(oneMonth.Seconds())}},
 		},
@@ -117,7 +117,7 @@ func TestGetAllActiveUserMembershipItems_AllCases(t *testing.T) {
 			name:        "refunded subscription 4",
 			txs:         []*models.Transaction{{ID: "1", PaymentItemID: "payment1", PurchaseAt: now, AutoRenewExpireAt: &[]time.Time{now.Add(oneMonth)}[0], RefundAt: &[]time.Time{now.Add(5 * time.Hour)}[0]}},
 			queryAt:     now.Add(7 * time.Hour),
-            paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeAutoRenewableSubscription}},
+			paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeAutoRenewableSubscription}},
 			wantLen:     0,
 		},
 		{
@@ -145,7 +145,7 @@ func TestGetAllActiveUserMembershipItems_AllCases(t *testing.T) {
 				{ID: "2", PaymentItemID: "payment1", PurchaseAt: now.Add(15 * 24 * time.Hour)},
 			},
 			queryAt:     now.Add(40 * 24 * time.Hour),
-            paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}},
+			paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}},
 			wantLen:     2,
 			want: []wantItem{
 				{id: "1", act: now, exp: now.Add(oneMonth), remS: int64(oneMonth.Seconds())},
@@ -159,7 +159,7 @@ func TestGetAllActiveUserMembershipItems_AllCases(t *testing.T) {
 				{ID: "2", PaymentItemID: "payment1", PurchaseAt: now.Add(twoMonths)},
 			},
 			queryAt:     now.Add(70 * 24 * time.Hour),
-            paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}},
+			paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}},
 			wantLen:     1,
 			want:        []wantItem{{id: "2", act: now.Add(twoMonths), exp: now.Add(threeMonths), remS: int64(oneMonth.Seconds())}},
 		},
@@ -170,7 +170,7 @@ func TestGetAllActiveUserMembershipItems_AllCases(t *testing.T) {
 				{ID: "2", PaymentItemID: "payment1", PurchaseAt: now.Add(oneMonth), AutoRenewExpireAt: &[]time.Time{now.Add(twoMonths)}[0]},
 			},
 			queryAt:     now.Add(20 * 24 * time.Hour),
-            paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeAutoRenewableSubscription}},
+			paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeAutoRenewableSubscription}},
 			wantLen:     1,
 			want:        []wantItem{{id: "1", act: now, exp: now.Add(oneMonth), remS: int64(oneMonth.Seconds())}},
 		},
@@ -181,7 +181,7 @@ func TestGetAllActiveUserMembershipItems_AllCases(t *testing.T) {
 				{ID: "2", PaymentItemID: "payment1", PurchaseAt: now.Add(oneMonth), AutoRenewExpireAt: &[]time.Time{now.Add(twoMonths)}[0]},
 			},
 			queryAt:     now.Add(35 * 24 * time.Hour),
-            paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeAutoRenewableSubscription}},
+			paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeAutoRenewableSubscription}},
 			wantLen:     2,
 			want: []wantItem{
 				{id: "1", act: now, exp: now.Add(oneMonth), remS: int64(oneMonth.Seconds())},
@@ -196,7 +196,7 @@ func TestGetAllActiveUserMembershipItems_AllCases(t *testing.T) {
 				{ID: "3", PaymentItemID: "payment3", PurchaseAt: now.Add(20 * 24 * time.Hour)},
 			},
 			queryAt:     now.Add(25 * 24 * time.Hour),
-            paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}, {id: "payment2", itemType: types.PaymentItemTypeAutoRenewableSubscription}, {id: "payment3", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}},
+			paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}, {id: "payment2", itemType: types.PaymentItemTypeAutoRenewableSubscription}, {id: "payment3", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}},
 			wantLen:     3,
 			want: []wantItem{
 				{id: "2", act: now.Add(10 * 24 * time.Hour), exp: now.Add(40 * 24 * time.Hour), remS: int64((30 * 24 * time.Hour).Seconds())},
@@ -215,7 +215,7 @@ func TestGetAllActiveUserMembershipItems_AllCases(t *testing.T) {
 				{ID: "6", PaymentItemID: "payment3", PurchaseAt: now.Add(oneHundredDays).Add(20 * 24 * time.Hour)},
 			},
 			queryAt:     now.Add(oneHundredDays).Add(25 * 24 * time.Hour),
-            paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}, {id: "payment2", itemType: types.PaymentItemTypeAutoRenewableSubscription}, {id: "payment3", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}},
+			paymentStub: []*mockPaymentItem{{id: "payment1", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}, {id: "payment2", itemType: types.PaymentItemTypeAutoRenewableSubscription}, {id: "payment3", itemType: types.PaymentItemTypeNonRenewableSubscription, durationHour: &oneMonthHours}},
 			wantLen:     3,
 			want: []wantItem{
 				{id: "5", act: now.Add(oneHundredDays).Add(10 * 24 * time.Hour), exp: now.Add(oneHundredDays).Add(40 * 24 * time.Hour), remS: int64((30 * 24 * time.Hour).Seconds())},

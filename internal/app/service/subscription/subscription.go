@@ -28,7 +28,7 @@ func (s *Service) getChangeReason(ctx context.Context, item *models.Transaction)
 		}
 	}
 
-	// todo: 处理升级、降级的情况
+	// TODO: handle upgrade and downgrade scenarios.
 
 	if paymentItem.Renewable() && !item.IsAutoRenewable() {
 		return types.UserSubscriptionChangeReasonCancelRenew, nil
@@ -37,7 +37,7 @@ func (s *Service) getChangeReason(ctx context.Context, item *models.Transaction)
 	return types.UserSubscriptionChangeReasonPurchase, nil
 }
 
-// GetUserActiveSubscriptionItems 获取指定时间点的所有有效订阅项（按用户ID）
+// GetUserActiveSubscriptionItems returns all active subscription items at queryAt for a user.
 func (s *Service) GetUserActiveSubscriptionItems(ctx context.Context, userID string, queryAt time.Time) ([]*UserSubscriptionItem, error) {
 	items, err := s.GetAllUserTransactions(ctx, userID)
 	if err != nil {
@@ -46,7 +46,7 @@ func (s *Service) GetUserActiveSubscriptionItems(ctx context.Context, userID str
 	return s.getAllActiveUserSubscriptionItems(ctx, items, queryAt)
 }
 
-// UpsertUserSubscriptionByItem 根据交易记录更新用户订阅
+// UpsertUserSubscriptionByItem updates user subscription state based on a transaction.
 func (s *Service) UpsertUserSubscriptionByItem(ctx context.Context, item *models.Transaction) error {
 	var subscriptionUpdated bool
 	var subscription *models.Subscription
@@ -129,7 +129,7 @@ func (s *Service) UpsertUserSubscriptionByItem(ctx context.Context, item *models
 	return nil
 }
 
-// 数据访问辅助
+// Data access helpers.
 func (s *Service) upsertTransaction(ctx context.Context, tx *gorm.DB, item *models.Transaction, changeReason types.SubscriptionChangeReason) error {
 	var original models.Transaction
 	err := tx.WithContext(ctx).
@@ -295,12 +295,12 @@ func (s *Service) cancelMembership(ctx context.Context, tx *gorm.DB, userID stri
 	return nil
 }
 
-// 处理订阅状态变化后的动作（占位）
+// handleMembershipChange is a placeholder for post-subscription-state-change actions.
 func (s *Service) handleMembershipChange(ctx context.Context, subscription *models.Subscription, reason types.SubscriptionChangeReason, item *models.Transaction) {
 	// no-op: integrate notification hooks here if needed
 }
 
-// SendFreeGift 发放内部赠礼（免费会员卡等）
+// SendFreeGift grants an internal gift (for example, a free membership card).
 func (s *Service) SendFreeGift(ctx context.Context, userID, paymentItemID, operatorID string) error {
 	if userID == "" || paymentItemID == "" {
 		return fmt.Errorf("invalid params: userID and paymentItemID required")

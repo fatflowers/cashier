@@ -20,7 +20,7 @@ type PaymentItem struct {
 	ProviderID     PaymentProvider `json:"provider_id" mapstructure:"provider_id"`
 	ProviderItemID string          `json:"provider_item_id" mapstructure:"provider_item_id"`
 	Type           PaymentItemType `json:"type" mapstructure:"type"`
-	// 时长类商品对应的时长，如果非时长类商品，则DurationHour为nil
+	// DurationHour is set for duration-based products and nil for non-duration products.
 	DurationHour *int64 `json:"duration_hour" mapstructure:"duration_hour"`
 }
 

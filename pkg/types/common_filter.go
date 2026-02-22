@@ -28,7 +28,7 @@ type CommonFilter struct {
 	Filters  []CommonFilter       `json:"filters"`
 }
 
-// Gorm 表达式构建
+// Build constructs a GORM expression.
 func (f *CommonFilter) Build(builder clause.Builder) {
 	if len(f.Values) == 0 {
 		return

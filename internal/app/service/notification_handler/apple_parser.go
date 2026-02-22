@@ -16,9 +16,9 @@ import (
 )
 
 type AppleNotificationParser struct {
-    cfg              *config.Config
-    NotificationTime time.Time
-    Notification     *apple_notification.AppStoreServerNotification
+	cfg              *config.Config
+	NotificationTime time.Time
+	Notification     *apple_notification.AppStoreServerNotification
 }
 
 func (p *AppleNotificationParser) GetProvider(ctx context.Context) types.PaymentProvider {
@@ -101,9 +101,9 @@ func (p *AppleNotificationParser) GetData(ctx context.Context) any {
 }
 
 func GetAppleNotificationParser(cfg *config.Config, ginCtx *gin.Context, notificationTime time.Time) (NotificationParser, error) {
-    if notificationTime.IsZero() {
-        notificationTime = time.Now()
-    }
+	if notificationTime.IsZero() {
+		notificationTime = time.Now()
+	}
 
 	var request apple_notification.AppStoreServerRequest
 	err := ginCtx.BindJSON(&request)
@@ -116,9 +116,9 @@ func GetAppleNotificationParser(cfg *config.Config, ginCtx *gin.Context, notific
 		return nil, err
 	}
 
-    return &AppleNotificationParser{
-        cfg:              cfg,
-        NotificationTime: notificationTime,
-        Notification:     notification,
-    }, nil
+	return &AppleNotificationParser{
+		cfg:              cfg,
+		NotificationTime: notificationTime,
+		Notification:     notification,
+	}, nil
 }

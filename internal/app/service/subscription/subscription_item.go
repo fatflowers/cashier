@@ -23,15 +23,15 @@ func NewService(cfg *config.Config, db *gorm.DB, log *zap.SugaredLogger) *Servic
 	return &Service{cfg: cfg, db: db, log: log}
 }
 
-// Subscription对应的Transaction的包装
+// UserSubscriptionItem wraps a Transaction with computed subscription-period data.
 type UserSubscriptionItem struct {
 	models.Transaction
-	// RemainingDurationSeconds 剩余有效期时长，单位：秒
-	// 退款导致的数据变动，会更新这个值
+	// RemainingDurationSeconds is the remaining active duration in seconds.
+	// It is updated when refund-related adjustments occur.
 	RemainingDurationSeconds int64 `json:"remaining_duration_seconds"`
-	// ActivatedAt 开始生效时间
+	// ActivatedAt is the effective start time.
 	ActivatedAt time.Time `json:"activated_at"`
-	// ExpireTime 过期时间
+	// ExpireAt is the expiration time.
 	ExpireAt time.Time `json:"expire_at"`
 }
 
@@ -49,15 +49,16 @@ func (s *Service) processNonRenewableSubscription(result []*UserSubscriptionItem
 	item.ExpireAt = item.ActivatedAt.Add(time.Duration(item.RemainingDurationSeconds) * time.Second)
 
 	if len(result) > 0 {
-		// 非自动续费订阅，追加到列表尾部，如果购买时间小于最后一个元素的过期时间，
-		// 则将生效时间设置为最后一个元素的过期时间，过期时间设置为购买时间加上剩余时长
+		// For non-renewable subscriptions, append to the tail.
+		// If purchase time is earlier than the last item's expiration,
+		// move activation to that expiration and recalculate expiration from remaining duration.
 		if item.PurchaseAt.Before(result[len(result)-1].ExpireAt) {
 			item.ActivatedAt = result[len(result)-1].ExpireAt
 			item.ExpireAt = item.ActivatedAt.Add(time.Duration(item.RemainingDurationSeconds) * time.Second)
 		}
 	}
 
-	// 如果退款时间不为空，并且过期时间大于查询时间，则跳过不处理
+	// Skip refunded items when the computed expiration is still after queryAt.
 	if item.RefundAt != nil && item.ExpireAt.After(queryAt) {
 		return result, nil
 	}
@@ -66,7 +67,7 @@ func (s *Service) processNonRenewableSubscription(result []*UserSubscriptionItem
 }
 
 func (s *Service) processAutoRenewableSubscription(result []*UserSubscriptionItem, item *UserSubscriptionItem, queryAt time.Time) ([]*UserSubscriptionItem, error) {
-	// 如果退款时间不为空，并且过期时间大于查询时间，则跳过不处理
+	// Skip refunded items when the computed expiration is still after queryAt.
 	if item.RefundAt != nil && item.AutoRenewExpireAt.After(queryAt) {
 		return result, nil
 	}
@@ -83,8 +84,8 @@ func (s *Service) processAutoRenewableSubscription(result []*UserSubscriptionIte
 	if len(result) == 0 {
 		result = append(result, item)
 	} else {
-		// 自动续费订阅，需要优先使用
-		// 当前已有订阅中，是否存在与当前自动续费购买时间有重叠的订阅
+		// Auto-renewable subscriptions should take precedence.
+		// Find whether an existing period overlaps with this purchase time.
 		insertIndex := -1
 		for index := range result {
 			if result[index].ExpireAt.After(item.PurchaseAt) {
@@ -96,11 +97,11 @@ func (s *Service) processAutoRenewableSubscription(result []*UserSubscriptionIte
 		if insertIndex == -1 {
 			result = append(result, item)
 		} else {
-			// 如果与已有的订阅有重叠
+			// Overlap exists with existing subscription periods.
 			for index := insertIndex; index < len(result); index += 1 {
 				if index == insertIndex {
-					// 中断已有订阅，并将当前自动订阅插入到已有订阅的前面
-					// 重新计算有重叠的存量项目的剩余有效期时长（RemainingDurationSeconds），为当前购买时间与已有订阅的过期时间差
+					// Split the existing period and insert current auto-renew item before it.
+					// Recalculate remaining duration for the overlapped existing item.
 					remainingDuration := result[index].ExpireAt.Sub(item.PurchaseAt)
 					result[index].RemainingDurationSeconds = int64(remainingDuration.Seconds())
 					result[index].ActivatedAt = item.ExpireAt
@@ -118,7 +119,7 @@ func (s *Service) processAutoRenewableSubscription(result []*UserSubscriptionIte
 	return result, nil
 }
 
-// selectLastActivePeriods 过滤并返回活跃的订阅周期
+// selectLastActivePeriods filters and returns the last contiguous active periods.
 func (s *Service) selectLastActivePeriods(items []*UserSubscriptionItem) ([]*UserSubscriptionItem, error) {
 	if len(items) == 0 {
 		return items, nil
@@ -149,9 +150,9 @@ func (s *Service) selectLastActivePeriods(items []*UserSubscriptionItem) ([]*Use
 	return result[:lastIndex+1], nil
 }
 
-// getAllActiveUserSubscriptionItems 获取指定时间点的所有有效会员订阅项
-// pgItems: 数据库中的会员订阅项
-// queryAt: 查询时间点
+// getAllActiveUserSubscriptionItems returns all active subscription items at queryAt.
+// pgItems: subscription items loaded from database.
+// queryAt: point-in-time used for evaluation.
 func (s *Service) getAllActiveUserSubscriptionItems(ctx context.Context, pgItems []*models.Transaction, queryAt time.Time) ([]*UserSubscriptionItem, error) {
 	if queryAt.IsZero() {
 		return nil, fmt.Errorf("invalid queryAt: zero value")
@@ -166,7 +167,7 @@ func (s *Service) getAllActiveUserSubscriptionItems(ctx context.Context, pgItems
 	var result []*UserSubscriptionItem
 
 	for _, pgItem := range pgItems {
-		// 如果购买时间大于查询时间
+		// Stop when purchase time is after queryAt.
 		if pgItem.PurchaseAt.After(queryAt) {
 			break
 		}
@@ -184,7 +185,7 @@ func (s *Service) getAllActiveUserSubscriptionItems(ctx context.Context, pgItems
 		}
 
 		var err error
-		// 提前判断支付项类型
+		// Branch early by payment item type.
 		switch paymentItem.Type {
 		case types.PaymentItemTypeNonRenewableSubscription:
 			result, err = s.processNonRenewableSubscription(result, paymentItem, item, queryAt)
