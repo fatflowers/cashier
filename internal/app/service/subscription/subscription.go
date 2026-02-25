@@ -81,6 +81,10 @@ func (s *Service) UpsertUserSubscriptionByItem(ctx context.Context, item *models
 
 		logctx.FromCtx(ctx, s.log).Infof("upsert user subscription by item, user_id=%s, item_id=%s, reason=%s", item.UserID, item.ID, reason)
 
+		if err := s.rebuildUserMembershipActiveItems(ctx, tx, item.UserID, items); err != nil {
+			return fmt.Errorf("failed to rebuild user membership active items: %w", err)
+		}
+
 		if len(items) == 0 {
 			subscription = &models.Subscription{
 				UserID: item.UserID,
@@ -130,6 +134,34 @@ func (s *Service) UpsertUserSubscriptionByItem(ctx context.Context, item *models
 }
 
 // Data access helpers.
+func (s *Service) rebuildUserMembershipActiveItems(ctx context.Context, tx *gorm.DB, userID string, items []*UserSubscriptionItem) error {
+	if err := tx.WithContext(ctx).Where("user_id = ?", userID).Delete(&models.UserMembershipActiveItem{}).Error; err != nil {
+		return fmt.Errorf("failed to delete user membership active items: %w", err)
+	}
+
+	if len(items) == 0 {
+		return nil
+	}
+
+	activeItems := make([]*models.UserMembershipActiveItem, 0, len(items))
+	for _, item := range items {
+		activeItem := item.ToUserMembershipActiveItem()
+		if activeItem != nil {
+			activeItems = append(activeItems, activeItem)
+		}
+	}
+
+	if len(activeItems) == 0 {
+		return nil
+	}
+
+	if err := tx.WithContext(ctx).Create(activeItems).Error; err != nil {
+		return fmt.Errorf("failed to create user membership active items: %w", err)
+	}
+
+	return nil
+}
+
 func (s *Service) upsertTransaction(ctx context.Context, tx *gorm.DB, item *models.Transaction, changeReason types.SubscriptionChangeReason) error {
 	var original models.Transaction
 	err := tx.WithContext(ctx).

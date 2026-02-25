@@ -54,7 +54,7 @@ type Receipt struct {
 	LatesetReceiptInfo []*ReceiptInfo `json:"latest_receipt_info"`
 }
 
-func VerifyServerVerificationData(ctx context.Context, receiptData string, opts *GetAppleIAPClientOptions) (*Receipt, error) {
+func VerifyServerVerificationData(ctx context.Context, receiptData string, opts *GetAppleIAPClientOptions) (*appstore.IAPResponse, error) {
 	if opts == nil {
 		return nil, errors.New("opts is nil")
 	}
@@ -64,7 +64,7 @@ func VerifyServerVerificationData(ctx context.Context, receiptData string, opts 
 		client.ProductionURL = client.SandboxURL
 	}
 
-	var result Receipt
+	var result appstore.IAPResponse
 
 	err := client.Verify(ctx, appstore.IAPRequest{
 		ReceiptData:            receiptData,

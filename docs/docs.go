@@ -126,70 +126,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/user/transaction/list": {
-            "get": {
-                "description": "Retrieves a paginated list of transactions for a specific user.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "User"
-                ],
-                "summary": "List User Transactions",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "user_id",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Pagination offset",
-                        "name": "from",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 100,
-                        "description": "Pagination limit",
-                        "name": "size",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "default": "purchase_at",
-                        "description": "Sort by field",
-                        "name": "sort_by",
-                        "in": "query"
-                    },
-                    {
-                        "enum": [
-                            "asc",
-                            "desc"
-                        ],
-                        "type": "string",
-                        "default": "desc",
-                        "description": "Sort order (asc/desc)",
-                        "name": "sort_order",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.RespUserListTransactions"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/user/transaction/verify": {
+        "/api/v2/payment/verify_transaction": {
             "post": {
-                "description": "Verifies a payment transaction with the provider and grants entitlement.",
+                "description": "Verifies a payment transaction and returns downgrade auto-renew information when needed.",
                 "consumes": [
                     "application/json"
                 ],
@@ -197,9 +136,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "User"
+                    "Payment"
                 ],
-                "summary": "Verify Transaction",
+                "summary": "Verify Transaction V2",
                 "parameters": [
                     {
                         "description": "Transaction verification request",
@@ -213,7 +152,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successful verification",
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.RespOK"
                         }
@@ -221,7 +160,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/webhook/apple": {
+        "/api/v2/payment/webhook/apple": {
             "post": {
                 "description": "Handles App Store Server Notifications V2. The request body should be a Signed JWS payload.",
                 "consumes": [
@@ -353,70 +292,6 @@ const docTemplate = `{
                 },
                 "data": {},
                 "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "handlers.RespUserListTransactions": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "$ref": "#/definitions/response.APIResponseCode"
-                },
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/handlers.SwaggerTransaction"
-                    }
-                },
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "handlers.SwaggerTransaction": {
-            "type": "object",
-            "properties": {
-                "auto_renew_expire_at": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "currency": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "next_auto_renew_at": {
-                    "type": "string"
-                },
-                "parent_transaction_id": {
-                    "type": "string"
-                },
-                "payment_item_id": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "integer"
-                },
-                "provider_id": {
-                    "$ref": "#/definitions/types.PaymentProvider"
-                },
-                "purchase_at": {
-                    "type": "string"
-                },
-                "refund_at": {
-                    "type": "string"
-                },
-                "transaction_id": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "user_id": {
                     "type": "string"
                 }
             }
@@ -579,7 +454,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "operator_id": {
-                    "description": "操作员ID",
+                    "description": "operator ID",
                     "type": "string"
                 },
                 "payment_item_id": {

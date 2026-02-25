@@ -112,7 +112,8 @@ func (h *NotificationHandler) HandleNotification(c *gin.Context, provider types.
 	h.Logger.Infow("got transaction", "transaction", txn)
 
 	if txn != nil {
-		return h.subSvc.UpsertUserSubscriptionByItem(c.Request.Context(), txn)
+		resErr = h.subSvc.UpsertUserSubscriptionByItem(c.Request.Context(), txn)
+		return resErr
 	}
 
 	resErr = fmt.Errorf("unsupported notification type")

@@ -79,10 +79,9 @@ APP_APPLE_IAP_IS_PROD=true
 ## API 概览（实际路由）
 - `GET /healthz`：健康检查。
 - `GET /swagger/*any`：Swagger UI（浏览器访问 `/swagger/index.html`）。
-- `POST /api/v1/webhook/apple`：App Store Server Notification V2 Webhook，Body 为签名的 JWS 文本。
-- 用户接口（`internal/app/api/handlers/user.go`）
-  - `POST /api/v1/user/transaction/verify`：交易核验（目前仅支持 `provider_id=apple`）。
-  - `GET /api/v1/user/transaction/list`：按 `user_id` 分页、排序检索交易。
+- 支付接口（`internal/app/api/handlers/payment_v2.go` / `internal/app/api/handlers/payment_webhook.go`）
+  - `POST /api/v2/payment/verify_transaction`：交易核验（本期仅支持 `provider_id=apple`）。
+  - `POST /api/v2/payment/webhook/apple`：App Store Server Notification V2 Webhook，Body 为签名的 JWS 文本。
 - 管理接口（`internal/app/api/handlers/admin.go`，挂载在 `/api/v1/admin`）：
   - `POST /api/v1/admin/list_user_membership_item`：分页/过滤查询交易（支持 `filters/from/size/sort_*`）。
   - `POST /api/v1/admin/get_membership_statistic`：会员/交易统计（按日 GMV、交易量、会员量、留存等）。
@@ -100,6 +99,7 @@ APP_APPLE_IAP_IS_PROD=true
 - 初始化：`internal/platform/db/postgres.go` 基于 `database.dsn` 连接 PostgreSQL。
 - 迁移：启动时 AutoMigrate 下列模型：
   - `Transaction`、`TransactionLog`
+  - `UserMembershipActiveItem`
   - `Subscription`、`SubscriptionLog`、`SubscriptionDailySnapshot`
 - 注意：请根据运行环境配置合适 DSN 与权限；生产环境建议开启 SSL。
 

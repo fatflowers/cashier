@@ -42,6 +42,7 @@ func AutoMigrate(l *zap.SugaredLogger, db *gorm.DB) error {
 		&models.Transaction{},
 		&models.TransactionLog{},
 		&models.PaymentNotificationLog{},
+		&models.UserMembershipActiveItem{},
 	); err != nil {
 		l.Errorf("automigrate failed: %v", err)
 		return err

@@ -61,14 +61,13 @@ func registerRoutes(r *gin.Engine, log *zap.SugaredLogger, notifHandler *nh.Noti
 	apiV1 := r.Group("/api/v1")
 	apiV1.Use(mw.RequestLoggerMiddleware(log), mw.AccessLogMiddleware())
 
-	// Webhook endpoints under /api/v1
-	handlers.RegisterPaymentWebhookRoutes(apiV1.Group("/webhook"), notifHandler)
-
-	// Transaction APIs under /api/v1
-	handlers.RegisterTransactionRoutes(apiV1.Group("/user"), txMgr)
-
 	// Admin payment APIs
 	handlers.RegisterAdminPaymentRoutes(apiV1.Group("/admin"), txMgr, cfg, stats, sub)
+
+	// Payment v2 APIs
+	apiV2Payment := r.Group("/api/v2/payment")
+	apiV2Payment.Use(mw.RequestLoggerMiddleware(log), mw.AccessLogMiddleware())
+	handlers.RegisterPaymentV2Routes(apiV2Payment, txMgr, notifHandler)
 }
 
 func runServer(lc fx.Lifecycle, log *zap.SugaredLogger, cfg *cfgpkg.Config, r *gin.Engine) {

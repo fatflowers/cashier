@@ -17,7 +17,7 @@ import (
 // @Produce      json
 // @Param        payload body string true "App Store Server Notification V2 JWS payload"
 // @Success      200  {object}  handlers.RespOK
-// @Router       /api/v1/webhook/apple [post]
+// @Router       /api/v2/payment/webhook/apple [post]
 // ApiAppleWebhook handles App Store Server Notifications
 func ApiAppleWebhook(h *nh.NotificationHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
