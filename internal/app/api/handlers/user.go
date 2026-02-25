@@ -26,7 +26,7 @@ func ApiVerifyTransaction(mgr transaction.TransactionManager) gin.HandlerFunc {
 			c.JSON(http.StatusOK, response.ErrorT[any](response.APIResponseCodeBadRequest, err.Error()))
 			return
 		}
-		if err := mgr.VerifyTransaction(c.Request.Context(), &req); err != nil {
+		if _, err := mgr.VerifyTransaction(c.Request.Context(), &req); err != nil {
 			c.JSON(http.StatusOK, response.ErrorT[any](response.APIResponseCodeError, err.Error()))
 			return
 		}

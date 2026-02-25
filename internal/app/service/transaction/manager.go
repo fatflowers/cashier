@@ -2,9 +2,10 @@ package transaction
 
 import (
 	"context"
+	"github.com/awa/go-iap/appstore"
 	models "github.com/fatflowers/cashier/internal/models"
-	"github.com/fatflowers/cashier/internal/platform/apple/apple_iap"
 	types "github.com/fatflowers/cashier/pkg/types"
+	"time"
 )
 
 type TransactionVerifyRequest struct {
@@ -18,7 +19,21 @@ type VerificationDataRequest struct {
 }
 
 type VerifiedData struct {
-	AppleReceipt *apple_iap.Receipt
+	AppleReceipt *appstore.IAPResponse
+}
+
+type VerifyTransactionResult struct {
+	DowngradeToVipID         string              `json:"downgrade_to_vip_id,omitempty"`
+	DowngradeNextAutoRenewAt *time.Time          `json:"downgrade_next_auto_renew_at,omitempty"`
+	IsUpgrade                bool                `json:"is_upgrade,omitempty"`
+	UserTransaction          *models.Transaction `json:"user_transaction,omitempty"`
+}
+
+func (r *VerifyTransactionResult) IsDowngrade() bool {
+	return r != nil &&
+		r.DowngradeToVipID != "" &&
+		r.DowngradeNextAutoRenewAt != nil &&
+		!r.DowngradeNextAutoRenewAt.IsZero()
 }
 
 type RefundRequest struct {
@@ -36,7 +51,7 @@ type SendFreeGiftRequest struct {
 // TransactionManager verifies/parses transaction data and grants entitlements.
 type TransactionManager interface {
 	// Verify transaction info.
-	VerifyTransaction(ctx context.Context, req *TransactionVerifyRequest) error
+	VerifyTransaction(ctx context.Context, req *TransactionVerifyRequest) (*VerifyTransactionResult, error)
 	// Parse verification data.
 	ParseVerificationData(ctx context.Context, req *VerificationDataRequest) (*VerifiedData, error)
 	// Process refund.

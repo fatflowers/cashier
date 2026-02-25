@@ -25,12 +25,12 @@ func NewService(cfg *config.Config, log *zap.SugaredLogger, apple *AppleTransact
 	return &Service{cfg: cfg, log: log, appleTransactionManager: apple, subSvc: sub, db: db}
 }
 
-func (s *Service) VerifyTransaction(ctx context.Context, req *TransactionVerifyRequest) error {
+func (s *Service) VerifyTransaction(ctx context.Context, req *TransactionVerifyRequest) (*VerifyTransactionResult, error) {
 	switch req.ProviderID {
 	case string(types.PaymentProviderApple):
 		return s.appleTransactionManager.VerifyTransaction(ctx, req)
 	default:
-		return fmt.Errorf("unsupported provider: %s", req.ProviderID)
+		return nil, fmt.Errorf("unsupported provider: %s", req.ProviderID)
 	}
 }
 

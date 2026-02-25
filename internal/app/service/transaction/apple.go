@@ -11,6 +11,7 @@ import (
 	"github.com/fatflowers/cashier/internal/platform/apple/apple_iap"
 	"github.com/fatflowers/cashier/pkg/config"
 	types "github.com/fatflowers/cashier/pkg/types"
+	"strings"
 	"time"
 
 	"github.com/awa/go-iap/appstore/api"
@@ -139,7 +140,15 @@ func (a *AppleTransactionManager) existsSamePurchaseTransaction(ctx context.Cont
 	return true, nil
 }
 
-func (a *AppleTransactionManager) VerifyTransaction(ctx context.Context, req *TransactionVerifyRequest) error {
+func mapDuplicateErr(msg string) error {
+	if strings.Contains(msg, "duplicate transaction already exists") {
+		return fmt.Errorf("%w: %s", ErrVerifyTransactionDuplicate, msg)
+	}
+	return errors.New(msg)
+}
+
+func (a *AppleTransactionManager) VerifyTransaction(ctx context.Context, req *TransactionVerifyRequest) (*VerifyTransactionResult, error) {
+	result := &VerifyTransactionResult{}
 	// Prepare and save a 'received' notification log
 	var userIDPtr *string
 	if v, ok := ctx.Value("user_id").(string); ok && v != "" {
@@ -196,29 +205,29 @@ func (a *AppleTransactionManager) VerifyTransaction(ctx context.Context, req *Tr
 	infoResp, err := a.iapClient.GetTransactionInfo(ctx, req.TransactionID)
 	if err != nil {
 		retErr = fmt.Errorf("failed to get transaction info: %w", err)
-		return retErr
+		return nil, retErr
 	}
 	txInfo, err = a.iapClient.ParseSignedTransaction(infoResp.SignedTransactionInfo)
 	if err != nil {
 		retErr = fmt.Errorf("failed to parse signed transaction: %w", err)
-		return retErr
+		return nil, retErr
 	}
 
 	// Environment check
 	if a.cfg.AppleIAP.IsProd && txInfo.Environment != api.Production {
 		retErr = fmt.Errorf("transaction is not in production environment")
-		return retErr
+		return nil, retErr
 	}
 
 	if txInfo.Type != api.AutoRenewable && txInfo.Type != api.NonRenewable {
 		retErr = fmt.Errorf("unsupported transaction type: %s", txInfo.Type)
-		return retErr
+		return nil, retErr
 	}
 
 	item, err := a.toTransaction(ctx, txInfo)
 	if err != nil {
 		retErr = fmt.Errorf("failed to map transaction: %w", err)
-		return retErr
+		return nil, retErr
 	}
 	mappedItem = item
 
@@ -226,21 +235,22 @@ func (a *AppleTransactionManager) VerifyTransaction(ctx context.Context, req *Tr
 		exists, err := a.existsSamePurchaseTransaction(ctx, txInfo.TransactionID, types.PaymentProviderApple, *item.ParentTransactionID, item.PurchaseAt)
 		if err != nil {
 			retErr = fmt.Errorf("failed to check duplicate transaction: %w", err)
-			return retErr
+			return nil, retErr
 		}
 		if exists {
-			retErr = fmt.Errorf("duplicate transaction already exists: %s", txInfo.TransactionID)
-			return retErr
+			retErr = mapDuplicateErr(fmt.Sprintf("duplicate transaction already exists: %s", txInfo.TransactionID))
+			return nil, retErr
 		}
 	}
 
 	// Persist via subscription service
 	if err := a.subSvc.UpsertUserSubscriptionByItem(ctx, item); err != nil {
 		retErr = fmt.Errorf("failed to upsert membership: %w", err)
-		return retErr
+		return nil, retErr
 	}
 
-	return nil
+	result.UserTransaction = item
+	return result, nil
 }
 
 func (a *AppleTransactionManager) ParseVerificationData(ctx context.Context, req *VerificationDataRequest) (*VerifiedData, error) {
