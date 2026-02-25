@@ -10,12 +10,14 @@ import (
 	models "github.com/fatflowers/cashier/internal/models"
 	"github.com/fatflowers/cashier/internal/platform/apple/apple_iap"
 	"github.com/fatflowers/cashier/pkg/config"
+	"github.com/fatflowers/cashier/pkg/logctx"
 	types "github.com/fatflowers/cashier/pkg/types"
 	"strings"
 	"time"
 
 	"github.com/awa/go-iap/appstore/api"
 	"github.com/samber/lo"
+	"go.uber.org/zap"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -28,9 +30,10 @@ type AppleTransactionManager struct {
 	db        *gorm.DB
 	subSvc    *subscription.Service
 	notifSvc  *notificationlog.Service
+	log       *zap.SugaredLogger
 }
 
-func NewAppleTransactionManager(cfg *config.Config, db *gorm.DB, sub *subscription.Service, notif *notificationlog.Service) (*AppleTransactionManager, error) {
+func NewAppleTransactionManager(cfg *config.Config, db *gorm.DB, sub *subscription.Service, notif *notificationlog.Service, log *zap.SugaredLogger) (*AppleTransactionManager, error) {
 	opts := &apple_iap.GetAppleIAPClientOptions{
 		KeyID:        cfg.AppleIAP.KeyID,
 		KeyContent:   cfg.AppleIAP.KeyContent,
@@ -43,7 +46,7 @@ func NewAppleTransactionManager(cfg *config.Config, db *gorm.DB, sub *subscripti
 	if err != nil {
 		return nil, fmt.Errorf("failed to init Apple IAP client: %w", err)
 	}
-	return &AppleTransactionManager{iapClient: cli, opts: opts, cfg: cfg, db: db, subSvc: sub, notifSvc: notif}, nil
+	return &AppleTransactionManager{iapClient: cli, opts: opts, cfg: cfg, db: db, subSvc: sub, notifSvc: notif, log: log}, nil
 }
 
 // Request/response types are defined in manager.go in this package.
@@ -157,8 +160,39 @@ func (a *AppleTransactionManager) getTransactionByProviderTransactionID(ctx cont
 	return &item, nil
 }
 
+func detectAppleUpgrade(parseResult *VerifiedData, txInfo *api.JWSTransaction) (string, bool) {
+	if parseResult == nil || parseResult.AppleReceipt == nil || txInfo == nil {
+		return "", false
+	}
+
+	receiptInfos := parseResult.AppleReceipt.LatestReceiptInfo
+	if len(receiptInfos) == 0 {
+		receiptInfos = parseResult.AppleReceipt.Receipt.InApp
+	}
+
+	currentIdx := -1
+	for i, info := range receiptInfos {
+		if info.TransactionID == txInfo.TransactionID {
+			currentIdx = i
+			break
+		}
+	}
+
+	if currentIdx < 0 || currentIdx+1 >= len(receiptInfos) {
+		return "", false
+	}
+
+	nextInfo := receiptInfos[currentIdx+1]
+	if nextInfo.IsUpgraded != "true" || nextInfo.TransactionID == "" {
+		return "", false
+	}
+
+	return nextInfo.TransactionID, true
+}
+
 func (a *AppleTransactionManager) VerifyTransaction(ctx context.Context, req *TransactionVerifyRequest) (*VerifyTransactionResult, error) {
 	result := &VerifyTransactionResult{}
+	logger := logctx.FromCtx(ctx, a.log)
 	// Prepare and save a 'received' notification log
 	var userIDPtr *string
 	if v, ok := ctx.Value("user_id").(string); ok && v != "" {
@@ -261,29 +295,16 @@ func (a *AppleTransactionManager) VerifyTransaction(ctx context.Context, req *Tr
 		})
 		if err != nil {
 			// Downgrade detection is best-effort and should not block verify flow.
+			logger.Warnw("detect apple downgrade failed", "transaction_id", txInfo.TransactionID, "error", err.Error())
 		} else if ok {
 			result.DowngradeToVipID = downgradeVipID
 			result.DowngradeNextAutoRenewAt = downgradeAt
-			if existing, e := a.getTransactionByProviderTransactionID(ctx, types.PaymentProviderApple, txInfo.TransactionID); e == nil {
-				result.UserTransaction = existing
-			}
-			return result, nil
 		}
 
-		// Determine upgrade by looking at the immediate next receipt item.
-		receiptInfos := parseResult.AppleReceipt.LatestReceiptInfo
-		if len(receiptInfos) == 0 {
-			receiptInfos = parseResult.AppleReceipt.Receipt.InApp
-		}
-		currentIdx := -1
-		for i, info := range receiptInfos {
-			if info.TransactionID == txInfo.TransactionID {
-				currentIdx = i
-				break
-			}
-		}
-		if currentIdx >= 0 && currentIdx+1 < len(receiptInfos) && receiptInfos[currentIdx+1].IsUpgraded == "true" {
-			result.IsUpgrade = true
+		beforeUpgradeTransactionID, isUpgrade := detectAppleUpgrade(parseResult, txInfo)
+		result.IsUpgrade = isUpgrade
+		if isUpgrade {
+			item.BeforeUpgradedTransactionID = lo.ToPtr(beforeUpgradeTransactionID)
 		}
 	}
 

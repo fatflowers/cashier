@@ -35,6 +35,10 @@ type UserSubscriptionItem struct {
 	ExpireAt time.Time `json:"expire_at"`
 }
 
+func providerTransactionKey(provider types.PaymentProvider, transactionID string) string {
+	return string(provider) + ":" + transactionID
+}
+
 func (item *UserSubscriptionItem) ToUserMembershipActiveItem() *models.UserMembershipActiveItem {
 	if item == nil {
 		return nil
@@ -181,12 +185,31 @@ func (s *Service) getAllActiveUserSubscriptionItems(ctx context.Context, pgItems
 
 	slices.SortStableFunc(pgItems, s.compareUserMembershipItemByPurchaseAt)
 
+	// Build a set of transactions that were superseded by upgrades effective at queryAt.
+	// Keep historical queries accurate by considering only upgrade records purchased before or at queryAt.
+	upgradedBefore := make(map[string]struct{})
+	for _, pgItem := range pgItems {
+		if pgItem == nil || pgItem.PurchaseAt.After(queryAt) {
+			continue
+		}
+		if pgItem.BeforeUpgradedTransactionID == nil || *pgItem.BeforeUpgradedTransactionID == "" {
+			continue
+		}
+		upgradedBefore[providerTransactionKey(pgItem.ProviderID, *pgItem.BeforeUpgradedTransactionID)] = struct{}{}
+	}
+
 	var result []*UserSubscriptionItem
 
 	for _, pgItem := range pgItems {
+		if pgItem == nil {
+			continue
+		}
 		// Stop when purchase time is after queryAt.
 		if pgItem.PurchaseAt.After(queryAt) {
 			break
+		}
+		if _, skipped := upgradedBefore[providerTransactionKey(pgItem.ProviderID, pgItem.TransactionID)]; skipped {
+			continue
 		}
 
 		item := &UserSubscriptionItem{

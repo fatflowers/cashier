@@ -27,8 +27,9 @@ func (s *Service) getChangeReason(ctx context.Context, item *models.Transaction)
 			return types.UserSubscriptionChangeReasonPurchase, fmt.Errorf("payment item not found: %s", item.PaymentItemID)
 		}
 	}
-
-	// TODO: handle upgrade and downgrade scenarios.
+	if item.BeforeUpgradedTransactionID != nil && *item.BeforeUpgradedTransactionID != "" {
+		return types.UserSubscriptionChangeReasonUpgrade, nil
+	}
 
 	if paymentItem.Renewable() && !item.IsAutoRenewable() {
 		return types.UserSubscriptionChangeReasonCancelRenew, nil

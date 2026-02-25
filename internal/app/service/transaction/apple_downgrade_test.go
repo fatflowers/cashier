@@ -73,7 +73,7 @@ func TestDetectAppleDowngrade_FallbackToReceiptInApp(t *testing.T) {
 	require.Equal(t, time.UnixMilli(1770724800000), *nextAt)
 }
 
-func TestDetectAppleDowngrade_LookupError_NonBlocking(t *testing.T) {
+func TestDetectAppleDowngrade_LookupError_ReturnsWarningError(t *testing.T) {
 	ctx := context.Background()
 
 	lookup := func(_ context.Context, _ types.PaymentProvider, _ string) (*types.PaymentItem, error) {
@@ -95,6 +95,97 @@ func TestDetectAppleDowngrade_LookupError_NonBlocking(t *testing.T) {
 	}}
 
 	vipID, nextAt, ok, err := detectAppleDowngrade(ctx, parseResult, &api.JWSTransaction{OriginalTransactionId: "orig-1"}, lookup)
+	require.Error(t, err)
+	require.False(t, ok)
+	require.Empty(t, vipID)
+	require.Nil(t, nextAt)
+}
+
+func TestDetectAppleDowngrade_AutoRenewOff(t *testing.T) {
+	ctx := context.Background()
+
+	parseResult := &VerifiedData{AppleReceipt: &appstore.IAPResponse{
+		PendingRenewalInfo: []appstore.PendingRenewalInfo{{
+			OriginalTransactionID:          "orig-1",
+			ProductID:                      "vip.high.month",
+			SubscriptionAutoRenewProductID: "vip.low.month",
+			SubscriptionAutoRenewStatus:    "0",
+		}},
+	}}
+
+	vipID, nextAt, ok, err := detectAppleDowngrade(ctx, parseResult, &api.JWSTransaction{OriginalTransactionId: "orig-1"}, nil)
+	require.NoError(t, err)
+	require.False(t, ok)
+	require.Empty(t, vipID)
+	require.Nil(t, nextAt)
+}
+
+func TestDetectAppleDowngrade_ExpiresMissing(t *testing.T) {
+	ctx := context.Background()
+
+	parseResult := &VerifiedData{AppleReceipt: &appstore.IAPResponse{
+		PendingRenewalInfo: []appstore.PendingRenewalInfo{{
+			OriginalTransactionID:          "orig-1",
+			ProductID:                      "vip.high.month",
+			SubscriptionAutoRenewProductID: "vip.low.month",
+			SubscriptionAutoRenewStatus:    "1",
+		}},
+		LatestReceiptInfo: []appstore.InApp{{
+			OriginalTransactionID: "orig-1",
+			ProductID:             "vip.high.month",
+			ExpiresDate:           appstore.ExpiresDate{ExpiresDateMS: ""},
+		}},
+	}}
+
+	vipID, nextAt, ok, err := detectAppleDowngrade(ctx, parseResult, &api.JWSTransaction{OriginalTransactionId: "orig-1"}, nil)
+	require.Error(t, err)
+	require.False(t, ok)
+	require.Empty(t, vipID)
+	require.Nil(t, nextAt)
+}
+
+func TestDetectAppleDowngrade_ExpiresInvalid(t *testing.T) {
+	ctx := context.Background()
+
+	parseResult := &VerifiedData{AppleReceipt: &appstore.IAPResponse{
+		PendingRenewalInfo: []appstore.PendingRenewalInfo{{
+			OriginalTransactionID:          "orig-1",
+			ProductID:                      "vip.high.month",
+			SubscriptionAutoRenewProductID: "vip.low.month",
+			SubscriptionAutoRenewStatus:    "1",
+		}},
+		LatestReceiptInfo: []appstore.InApp{{
+			OriginalTransactionID: "orig-1",
+			ProductID:             "vip.high.month",
+			ExpiresDate:           appstore.ExpiresDate{ExpiresDateMS: "bad"},
+		}},
+	}}
+
+	vipID, nextAt, ok, err := detectAppleDowngrade(ctx, parseResult, &api.JWSTransaction{OriginalTransactionId: "orig-1"}, nil)
+	require.Error(t, err)
+	require.False(t, ok)
+	require.Empty(t, vipID)
+	require.Nil(t, nextAt)
+}
+
+func TestDetectAppleDowngrade_OriginalTransactionMismatch(t *testing.T) {
+	ctx := context.Background()
+
+	parseResult := &VerifiedData{AppleReceipt: &appstore.IAPResponse{
+		PendingRenewalInfo: []appstore.PendingRenewalInfo{{
+			OriginalTransactionID:          "orig-1",
+			ProductID:                      "vip.high.month",
+			SubscriptionAutoRenewProductID: "vip.low.month",
+			SubscriptionAutoRenewStatus:    "1",
+		}},
+		LatestReceiptInfo: []appstore.InApp{{
+			OriginalTransactionID: "orig-other",
+			ProductID:             "vip.high.month",
+			ExpiresDate:           appstore.ExpiresDate{ExpiresDateMS: "1770724800000"},
+		}},
+	}}
+
+	vipID, nextAt, ok, err := detectAppleDowngrade(ctx, parseResult, &api.JWSTransaction{OriginalTransactionId: "orig-1"}, nil)
 	require.NoError(t, err)
 	require.False(t, ok)
 	require.Empty(t, vipID)

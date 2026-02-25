@@ -15,6 +15,7 @@ const (
 	UserSubscriptionChangeReasonPurchase    SubscriptionChangeReason = "purchase"
 	UserSubscriptionChangeReasonRefund      SubscriptionChangeReason = "refund"
 	UserSubscriptionChangeReasonCancelRenew SubscriptionChangeReason = "cancelRenew"
+	UserSubscriptionChangeReasonUpgrade     SubscriptionChangeReason = "upgrade"
 	UserSubscriptionChangeReasonGift        SubscriptionChangeReason = "gift"
 )
 

@@ -20,7 +20,7 @@ type UserSubscriptionItemExtra struct {
 type Transaction struct {
 	ID            string                `gorm:"column:id;primary_key;type:uuid;index:idx_user_id_id,priority:2,sort:desc" json:"id"`
 	UserID        string                `gorm:"column:user_id;type:varchar(64);not null;index:idx_user_id_id,priority:1" json:"user_id"`
-	ProviderID    types.PaymentProvider `gorm:"column:provider_id;type:varchar(64);not null;uniqueIndex:unique_provider_id_transaction_id,priority:1" json:"provider_id"`
+	ProviderID    types.PaymentProvider `gorm:"column:provider_id;type:varchar(64);not null;uniqueIndex:unique_provider_id_transaction_id,priority:1;uniqueIndex:unique_provider_id_before_upgraded_transaction_id,priority:1" json:"provider_id"`
 	PaymentItemID string                `gorm:"column:payment_item_id;type:varchar(64);not null" json:"payment_item_id"`
 	TransactionID string                `gorm:"column:transaction_id;type:varchar(64);not null;uniqueIndex:unique_provider_id_transaction_id,priority:2" json:"transaction_id"`
 	Currency      string                `gorm:"column:currency;type:varchar(64);not null" json:"currency"`
@@ -38,6 +38,8 @@ type Transaction struct {
 	// During subscription upgrades, the original transaction may carry revocationDate and revocationReason to mark invalidation.
 	RevocationDate   *time.Time `gorm:"column:revocation_date;default:null" json:"revocation_date"`
 	RevocationReason *string    `gorm:"column:revocation_reason;type:varchar(64);default:null" json:"revocation_reason"`
+	// BeforeUpgradedTransactionID points to the transaction_id this record upgrades from.
+	BeforeUpgradedTransactionID *string `gorm:"column:before_upgraded_transaction_id;type:varchar(64);uniqueIndex:unique_provider_id_before_upgraded_transaction_id,priority:2" json:"before_upgraded_transaction_id"`
 
 	Extra     datatypes.JSONType[*UserSubscriptionItemExtra] `gorm:"column:extra;type:jsonb;default:'{}'" json:"extra"`
 	CreatedAt time.Time                                      `json:"created_at"`
