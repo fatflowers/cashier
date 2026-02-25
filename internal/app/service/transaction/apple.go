@@ -147,6 +147,16 @@ func mapDuplicateErr(msg string) error {
 	return errors.New(msg)
 }
 
+func (a *AppleTransactionManager) getTransactionByProviderTransactionID(ctx context.Context, providerID types.PaymentProvider, transactionID string) (*models.Transaction, error) {
+	var item models.Transaction
+	if err := a.db.WithContext(ctx).
+		Where("provider_id = ? AND transaction_id = ?", providerID, transactionID).
+		First(&item).Error; err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
 func (a *AppleTransactionManager) VerifyTransaction(ctx context.Context, req *TransactionVerifyRequest) (*VerifyTransactionResult, error) {
 	result := &VerifyTransactionResult{}
 	// Prepare and save a 'received' notification log
@@ -231,6 +241,52 @@ func (a *AppleTransactionManager) VerifyTransaction(ctx context.Context, req *Tr
 	}
 	mappedItem = item
 
+	if txInfo.Type == api.AutoRenewable {
+		if req.ServerVerificationData == "" {
+			retErr = fmt.Errorf("server verification data is empty")
+			return nil, retErr
+		}
+
+		parseResult, err := a.ParseVerificationData(ctx, &VerificationDataRequest{
+			ProviderID:  string(types.PaymentProviderApple),
+			ReceiptData: req.ServerVerificationData,
+		})
+		if err != nil {
+			retErr = fmt.Errorf("failed to parse verification data: %w", err)
+			return nil, retErr
+		}
+
+		downgradeVipID, downgradeAt, ok, err := detectAppleDowngrade(ctx, parseResult, txInfo, func(ctx context.Context, provider types.PaymentProvider, providerItemID string) (*types.PaymentItem, error) {
+			return a.cfg.GetPaymentItemByProviderItemID(ctx, provider, providerItemID)
+		})
+		if err != nil {
+			// Downgrade detection is best-effort and should not block verify flow.
+		} else if ok {
+			result.DowngradeToVipID = downgradeVipID
+			result.DowngradeNextAutoRenewAt = downgradeAt
+			if existing, e := a.getTransactionByProviderTransactionID(ctx, types.PaymentProviderApple, txInfo.TransactionID); e == nil {
+				result.UserTransaction = existing
+			}
+			return result, nil
+		}
+
+		// Determine upgrade by looking at the immediate next receipt item.
+		receiptInfos := parseResult.AppleReceipt.LatestReceiptInfo
+		if len(receiptInfos) == 0 {
+			receiptInfos = parseResult.AppleReceipt.Receipt.InApp
+		}
+		currentIdx := -1
+		for i, info := range receiptInfos {
+			if info.TransactionID == txInfo.TransactionID {
+				currentIdx = i
+				break
+			}
+		}
+		if currentIdx >= 0 && currentIdx+1 < len(receiptInfos) && receiptInfos[currentIdx+1].IsUpgraded == "true" {
+			result.IsUpgrade = true
+		}
+	}
+
 	if txInfo.Type == api.AutoRenewable && item.ParentTransactionID != nil {
 		exists, err := a.existsSamePurchaseTransaction(ctx, txInfo.TransactionID, types.PaymentProviderApple, *item.ParentTransactionID, item.PurchaseAt)
 		if err != nil {
@@ -249,7 +305,12 @@ func (a *AppleTransactionManager) VerifyTransaction(ctx context.Context, req *Tr
 		return nil, retErr
 	}
 
-	result.UserTransaction = item
+	if persisted, err := a.getTransactionByProviderTransactionID(ctx, types.PaymentProviderApple, txInfo.TransactionID); err == nil {
+		result.UserTransaction = persisted
+	} else {
+		// Non-fatal fallback to mapped transaction view.
+		result.UserTransaction = item
+	}
 	return result, nil
 }
 

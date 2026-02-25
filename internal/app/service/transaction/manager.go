@@ -9,8 +9,9 @@ import (
 )
 
 type TransactionVerifyRequest struct {
-	ProviderID    string `json:"provider_id"`
-	TransactionID string `json:"transaction_id"`
+	ProviderID             string `json:"provider_id"`
+	TransactionID          string `json:"transaction_id"`
+	ServerVerificationData string `json:"server_verification_data"`
 }
 
 type VerificationDataRequest struct {

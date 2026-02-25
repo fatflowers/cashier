@@ -471,6 +471,9 @@ const docTemplate = `{
                 "provider_id": {
                     "type": "string"
                 },
+                "server_verification_data": {
+                    "type": "string"
+                },
                 "transaction_id": {
                     "type": "string"
                 }

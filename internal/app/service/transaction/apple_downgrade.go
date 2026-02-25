@@ -10,11 +10,9 @@ import (
 	types "github.com/fatflowers/cashier/pkg/types"
 )
 
-var applePaymentItemLookup = func(ctx context.Context, provider types.PaymentProvider, providerItemID string) (*types.PaymentItem, error) {
-	return nil, nil
-}
+type applePaymentItemLookupFn func(ctx context.Context, provider types.PaymentProvider, providerItemID string) (*types.PaymentItem, error)
 
-func detectAppleDowngrade(ctx context.Context, parseResult *VerifiedData, txInfo *api.JWSTransaction) (string, *time.Time, bool, error) {
+func detectAppleDowngrade(ctx context.Context, parseResult *VerifiedData, txInfo *api.JWSTransaction, lookup applePaymentItemLookupFn) (string, *time.Time, bool, error) {
 	if parseResult == nil || parseResult.AppleReceipt == nil || txInfo == nil {
 		return "", nil, false, nil
 	}
@@ -31,8 +29,14 @@ func detectAppleDowngrade(ctx context.Context, parseResult *VerifiedData, txInfo
 		return "", nil, false, nil
 	}
 
+	receiptInfos := parseResult.AppleReceipt.LatestReceiptInfo
+	if len(receiptInfos) == 0 {
+		// Fallback to in_app when latest_receipt_info is absent.
+		receiptInfos = parseResult.AppleReceipt.Receipt.InApp
+	}
+
 	var latestMS int64
-	for _, info := range parseResult.AppleReceipt.LatestReceiptInfo {
+	for _, info := range receiptInfos {
 		if string(info.OriginalTransactionID) != pending.OriginalTransactionID || info.ProductID != pending.ProductID || info.ExpiresDateMS == "" {
 			continue
 		}
@@ -45,9 +49,13 @@ func detectAppleDowngrade(ctx context.Context, parseResult *VerifiedData, txInfo
 		return "", nil, false, nil
 	}
 
-	item, err := applePaymentItemLookup(ctx, types.PaymentProviderApple, pending.SubscriptionAutoRenewProductID)
+	if lookup == nil {
+		return "", nil, false, nil
+	}
+	item, err := lookup(ctx, types.PaymentProviderApple, pending.SubscriptionAutoRenewProductID)
 	if err != nil || item == nil || item.ID == "" {
-		return "", nil, false, err
+		// Keep downgrade detection best-effort: lookup issues should not break verify flow.
+		return "", nil, false, nil
 	}
 
 	next := time.UnixMilli(latestMS)
