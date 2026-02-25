@@ -2,32 +2,46 @@ package apple_iap
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"unicode"
 )
 
+const (
+	uuidHexLen      = 32
+	maxUserIDHexLen = 30
+	padChar         = "a"
+)
+
 // UserIDToUUID converts a user ID to UUID format.
 func UserIDToUUID(userID string) (string, error) {
-	if len(userID) > 32 {
-		return "", fmt.Errorf("string too long")
+	if userID == "" {
+		return "", fmt.Errorf("user id is empty")
 	}
 
-	// Validate that the input contains digits only.
-	for _, ch := range userID {
-		if !unicode.IsDigit(ch) {
-			return "", fmt.Errorf("string is not pure number")
-		}
+	// Use a reversible length-prefixed hex scheme for all user IDs.
+	// format: [2-hex len][hex userID][padding to 32 with 'a']
+	normalized := strings.ToLower(userID)
+	if !isHex(normalized) {
+		return "", fmt.Errorf("string is not valid hex")
+	}
+	if len(normalized) > maxUserIDHexLen {
+		return "", fmt.Errorf("hex string too long: max length is %d", maxUserIDHexLen)
 	}
 
-	// Build the base UUID hex string.
-	uuidHex := userID
-
-	// Left-pad with 'a' if the hex string is shorter than 32 chars.
-	if len(uuidHex) < 32 {
-		uuidHex = strings.Repeat("a", 32-len(uuidHex)) + uuidHex
+	prefix := fmt.Sprintf("%02x", len(normalized))
+	uuidHex := prefix + normalized
+	if len(uuidHex) < uuidHexLen {
+		uuidHex += strings.Repeat(padChar, uuidHexLen-len(uuidHex))
 	}
 
-	// Format as RFC 4122 UUID.
+	return formatUUID(uuidHex)
+}
+
+func formatUUID(uuidHex string) (string, error) {
+	if len(uuidHex) != uuidHexLen {
+		return "", fmt.Errorf("invalid uuid hex length: %d", len(uuidHex))
+	}
 	var formattedUUID strings.Builder
 	formattedUUID.WriteString(uuidHex[:8])
 	formattedUUID.WriteString("-")
@@ -44,8 +58,35 @@ func UserIDToUUID(userID string) (string, error) {
 
 // UUIDToUserID converts UUID format back to user ID.
 func UUIDToUserID(uuid string) (string, error) {
-	// Remove UUID hyphens.
-	cleanUUID := strings.ReplaceAll(uuid, "-", "")
+	cleanUUID := strings.ToLower(strings.ReplaceAll(uuid, "-", ""))
+	if len(cleanUUID) != uuidHexLen || !isHex(cleanUUID) {
+		return "", fmt.Errorf("invalid uuid format")
+	}
 
-	return strings.TrimLeft(cleanUUID, "a"), nil
+	// Try to decode length-prefixed hex scheme first.
+	if n, err := strconv.ParseUint(cleanUUID[:2], 16, 8); err == nil {
+		size := int(n)
+		if size > 0 && size <= maxUserIDHexLen {
+			end := 2 + size
+			payload := cleanUUID[2:end]
+			padding := cleanUUID[end:]
+			if isHex(payload) && strings.Trim(padding, padChar) == "" {
+				return payload, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("uuid is not encoded by known user id scheme")
+}
+
+func isHex(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, ch := range s {
+		if !(unicode.IsDigit(ch) || ('a' <= ch && ch <= 'f') || ('A' <= ch && ch <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
