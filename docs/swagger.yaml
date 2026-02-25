@@ -50,48 +50,6 @@ definitions:
       message:
         type: string
     type: object
-  handlers.RespUserListTransactions:
-    properties:
-      code:
-        $ref: '#/definitions/response.APIResponseCode'
-      data:
-        items:
-          $ref: '#/definitions/handlers.SwaggerTransaction'
-        type: array
-      message:
-        type: string
-    type: object
-  handlers.SwaggerTransaction:
-    properties:
-      auto_renew_expire_at:
-        type: string
-      created_at:
-        type: string
-      currency:
-        type: string
-      id:
-        type: string
-      next_auto_renew_at:
-        type: string
-      parent_transaction_id:
-        type: string
-      payment_item_id:
-        type: string
-      price:
-        type: integer
-      provider_id:
-        $ref: '#/definitions/types.PaymentProvider'
-      purchase_at:
-        type: string
-      refund_at:
-        type: string
-      transaction_id:
-        type: string
-      updated_at:
-        type: string
-      user_id:
-        type: string
-    type: object
   handlers.TransactionItem:
     properties:
       auto_renew_expire_at:
@@ -202,7 +160,7 @@ definitions:
   transaction.SendFreeGiftRequest:
     properties:
       operator_id:
-        description: 操作员ID
+        description: operator ID
         type: string
       payment_item_id:
         type: string
@@ -350,53 +308,12 @@ paths:
       summary: Send Free Gift (Admin)
       tags:
       - Admin
-  /api/v1/user/transaction/list:
-    get:
-      description: Retrieves a paginated list of transactions for a specific user.
-      parameters:
-      - description: User ID
-        in: query
-        name: user_id
-        required: true
-        type: string
-      - default: 0
-        description: Pagination offset
-        in: query
-        name: from
-        type: integer
-      - default: 100
-        description: Pagination limit
-        in: query
-        name: size
-        type: integer
-      - default: purchase_at
-        description: Sort by field
-        in: query
-        name: sort_by
-        type: string
-      - default: desc
-        description: Sort order (asc/desc)
-        enum:
-        - asc
-        - desc
-        in: query
-        name: sort_order
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handlers.RespUserListTransactions'
-      summary: List User Transactions
-      tags:
-      - User
-  /api/v1/user/transaction/verify:
+  /api/v2/payment/verify_transaction:
     post:
       consumes:
       - application/json
-      description: Verifies a payment transaction with the provider and grants entitlement.
+      description: Verifies a payment transaction and returns downgrade auto-renew
+        information when needed.
       parameters:
       - description: Transaction verification request
         in: body
@@ -408,13 +325,13 @@ paths:
       - application/json
       responses:
         "200":
-          description: Successful verification
+          description: OK
           schema:
             $ref: '#/definitions/handlers.RespOK'
-      summary: Verify Transaction
+      summary: Verify Transaction V2
       tags:
-      - User
-  /api/v1/webhook/apple:
+      - Payment
+  /api/v2/payment/webhook/apple:
     post:
       consumes:
       - application/json

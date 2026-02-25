@@ -30,10 +30,17 @@ func (p *AppleNotificationParser) GetNotificationTime(ctx context.Context) time.
 }
 
 func (p *AppleNotificationParser) GetApp(ctx context.Context) string {
+	if p == nil || p.Notification == nil || p.Notification.TransactionInfo == nil {
+		return ""
+	}
 	return p.Notification.TransactionInfo.BundleId
 }
 
 func (p *AppleNotificationParser) GetUserID(ctx context.Context) (string, error) {
+	if p == nil || p.Notification == nil || p.Notification.TransactionInfo == nil {
+		return "", fmt.Errorf("transaction info is empty")
+	}
+
 	if p.Notification.TransactionInfo.AppAccountToken == "" {
 		return "", fmt.Errorf("app account token is empty")
 	}
@@ -42,14 +49,25 @@ func (p *AppleNotificationParser) GetUserID(ctx context.Context) (string, error)
 }
 
 func (p *AppleNotificationParser) GetTransactionID(ctx context.Context) string {
+	if p == nil || p.Notification == nil || p.Notification.TransactionInfo == nil {
+		return ""
+	}
 	return p.Notification.TransactionInfo.TransactionId
 }
 
 func (p *AppleNotificationParser) GetPaymentItem(ctx context.Context) (*types.PaymentItem, error) {
+	if p == nil || p.Notification == nil || p.Notification.TransactionInfo == nil {
+		return nil, fmt.Errorf("transaction info is empty")
+	}
+
 	return p.cfg.GetPaymentItemByProviderItemID(ctx, p.GetProvider(ctx), p.Notification.TransactionInfo.ProductId)
 }
 
 func (p *AppleNotificationParser) GetTransaction(ctx context.Context) (*models.Transaction, error) {
+	if p == nil || p.Notification == nil || p.Notification.TransactionInfo == nil {
+		return nil, fmt.Errorf("transaction info is empty")
+	}
+
 	paymentItem, err := p.GetPaymentItem(ctx)
 	if err != nil {
 		return nil, err

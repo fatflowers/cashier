@@ -35,6 +35,23 @@ type UserSubscriptionItem struct {
 	ExpireAt time.Time `json:"expire_at"`
 }
 
+func (item *UserSubscriptionItem) ToUserMembershipActiveItem() *models.UserMembershipActiveItem {
+	if item == nil {
+		return nil
+	}
+
+	return &models.UserMembershipActiveItem{
+		ID:                       item.ID,
+		UserTransactionID:        item.ID,
+		PaymentItemID:            item.PaymentItemID,
+		UserID:                   item.UserID,
+		RemainingDurationSeconds: item.RemainingDurationSeconds,
+		ActivatedAt:              item.ActivatedAt,
+		ExpireAt:                 item.ExpireAt,
+		NextAutoRenewAt:          item.NextAutoRenewAt,
+	}
+}
+
 func (s *Service) compareUserMembershipItemByPurchaseAt(a, b *models.Transaction) int {
 	return a.PurchaseAt.Compare(b.PurchaseAt)
 }
@@ -102,7 +119,7 @@ func (s *Service) processAutoRenewableSubscription(result []*UserSubscriptionIte
 				if index == insertIndex {
 					// Split the existing period and insert current auto-renew item before it.
 					// Recalculate remaining duration for the overlapped existing item.
-					remainingDuration := result[index].ExpireAt.Sub(item.PurchaseAt)
+					remainingDuration := result[index].ExpireAt.Sub(item.ActivatedAt)
 					result[index].RemainingDurationSeconds = int64(remainingDuration.Seconds())
 					result[index].ActivatedAt = item.ExpireAt
 					result[index].ExpireAt = result[index].ActivatedAt.Add(remainingDuration)

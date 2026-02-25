@@ -10,6 +10,7 @@ import (
 	types "github.com/fatflowers/cashier/pkg/types"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
 
@@ -250,4 +251,53 @@ func TestGetAllActiveUserMembershipItems_AllCases(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetAllActiveUserMembershipItems_AutoRenewOverlap_UsesActivatedAtForRemainingDuration(t *testing.T) {
+	now := time.Now()
+	oneMonthHours := int64(30 * 24)
+
+	cfg := &config.Config{PaymentItems: []*types.PaymentItem{
+		{ID: "p1", Type: types.PaymentItemTypeNonRenewableSubscription, DurationHour: &oneMonthHours},
+		{ID: "p2", Type: types.PaymentItemTypeAutoRenewableSubscription},
+	}}
+	svc := NewService(cfg, nil, zap.NewNop().Sugar())
+
+	txs := []*models.Transaction{
+		{ID: "1", PaymentItemID: "p1", PurchaseAt: now},
+		{ID: "2", PaymentItemID: "p2", PurchaseAt: now.Add(15 * 24 * time.Hour), AutoRenewExpireAt: &[]time.Time{now.Add(45 * 24 * time.Hour)}[0]},
+	}
+
+	items, err := svc.getAllActiveUserSubscriptionItems(context.Background(), txs, now.Add(20*24*time.Hour))
+	require.NoError(t, err)
+	require.Len(t, items, 2)
+	require.Equal(t, int64((15 * 24 * time.Hour).Seconds()), items[1].RemainingDurationSeconds)
+}
+
+func TestUserSubscriptionItem_ToUserMembershipActiveItem(t *testing.T) {
+	now := time.Now()
+	nextRenew := now.Add(24 * time.Hour)
+
+	item := &UserSubscriptionItem{
+		Transaction: models.Transaction{
+			ID:              "tx-1",
+			UserID:          "user-1",
+			PaymentItemID:   "vip-monthly",
+			NextAutoRenewAt: &nextRenew,
+		},
+		RemainingDurationSeconds: int64((30 * 24 * time.Hour).Seconds()),
+		ActivatedAt:              now,
+		ExpireAt:                 now.Add(30 * 24 * time.Hour),
+	}
+
+	activeItem := item.ToUserMembershipActiveItem()
+	require.NotNil(t, activeItem)
+	require.Equal(t, "tx-1", activeItem.ID)
+	require.Equal(t, "tx-1", activeItem.UserTransactionID)
+	require.Equal(t, "vip-monthly", activeItem.PaymentItemID)
+	require.Equal(t, "user-1", activeItem.UserID)
+	require.Equal(t, item.RemainingDurationSeconds, activeItem.RemainingDurationSeconds)
+	require.True(t, item.ActivatedAt.Equal(activeItem.ActivatedAt))
+	require.True(t, item.ExpireAt.Equal(activeItem.ExpireAt))
+	require.Equal(t, item.NextAutoRenewAt, activeItem.NextAutoRenewAt)
 }
